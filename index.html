@@ -11,7 +11,16 @@
 </head>
 <body>
     <h1>Bienvenue sur mon site de notifications !</h1>
-    <p>Ce site recevra des notifications push lorsque des produits seront disponibles.</p>
+    <p>Ce site recevra des notifications push.</p>
+
+    <h2>Connexion / Inscription</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Mot de passe">
+    <button id="signupButton">S'inscrire</button>
+    <button id="loginButton">Se connecter</button>
+    <button id="logoutButton" style="display:none;">Se déconnecter</button>
+    
+    <p id="authStatus">🔄 Vérification de l'état de connexion...</p> 
 
     <!-- Bouton pour activer les notifications -->
     <button id="notifButton">Activer les notifications</button>
@@ -65,6 +74,65 @@
             console.log("📩 Notification reçue :", payload);
             alert(payload.notification.title + "\n" + payload.notification.body);
         });
+        
+        // 📌 Importer Firebase Auth
+        const auth = firebase.auth();
+
+        // 📌 Vérifier l'état de connexion au chargement de la page
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                console.log("✅ Utilisateur connecté :", user.email);
+                document.getElementById("authStatus").innerText = `✅ Connecté en tant que ${user.email}`;
+                document.getElementById("logoutButton").style.display = "block";
+            } else {
+                console.log("❌ Aucun utilisateur connecté.");
+                document.getElementById("authStatus").innerText = "❌ Non connecté";
+                document.getElementById("logoutButton").style.display = "none";
+            }
+        });
+
+        // 📌 Inscription d'un nouvel utilisateur
+        document.getElementById("signupButton").addEventListener("click", () => {
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    console.log("✅ Utilisateur créé :", userCredential.user.email);
+                    alert("Compte créé avec succès !");
+                })
+                .catch((error) => {
+                    console.log("❌ Erreur d'inscription :", error.message);
+                    alert(error.message);
+                });
+        });
+
+        // 📌 Connexion d'un utilisateur existant
+        document.getElementById("loginButton").addEventListener("click", () => {
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    console.log("✅ Connecté :", userCredential.user.email);
+                    alert("Connexion réussie !");
+                })
+                .catch((error) => {
+                    console.log("❌ Erreur de connexion :", error.message);
+                    alert(error.message);
+                });
+        });
+
+        // 📌 Déconnexion
+        document.getElementById("logoutButton").addEventListener("click", () => {
+            auth.signOut().then(() => {
+                console.log("✅ Déconnecté avec succès");
+                alert("Déconnexion réussie !");
+            }).catch((error) => {
+                console.log("❌ Erreur lors de la déconnexion :", error.message);
+            });
+        });
+
     </script>
 </body>
 </html>
