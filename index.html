@@ -31,35 +31,34 @@
         firebase.initializeApp(firebaseConfig);
         const messaging = firebase.messaging();
 
-        // 📌 Désactiver l'enregistrement automatique du Service Worker par Firebase
-        messaging.useServiceWorker(navigator.serviceWorker.getRegistration('/notifications-web/firebase-messaging-sw.js'));
-
-        // 📌 Enregistrer le Service Worker (nécessaire pour les notifications)
+        // 📌 Enregistrer manuellement le Service Worker et récupérer le Token FCM
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/notifications-web/firebase-messaging-sw.js')
                 .then((registration) => {
                     console.log("✅ Service Worker enregistré avec succès :", registration);
+
+                    // 📌 Ajouter un écouteur sur le bouton pour activer les notifications
+                    document.getElementById("notifButton").addEventListener("click", () => {
+                        Notification.requestPermission().then((permission) => {
+                            if (permission === "granted") {
+                                messaging.getToken({ serviceWorkerRegistration: registration }) // ✅ Correction ici !
+                                    .then((token) => {
+                                        console.log("✅ Token FCM reçu :", token);
+                                        alert("Notifications activées ! Vérifie la console (F12) pour voir le token.");
+                                    })
+                                    .catch((err) => {
+                                        console.log("❌ Erreur lors de la récupération du token", err);
+                                    });
+                            } else {
+                                alert("❌ Permission refusée. Activez les notifications dans les paramètres du navigateur.");
+                            }
+                        });
+                    });
                 })
                 .catch((error) => {
                     console.log("❌ Erreur lors de l’enregistrement du Service Worker :", error);
                 });
-        }
-
-        // Demande la permission pour recevoir des notifications
-        document.getElementById("notifButton").addEventListener("click", () => {
-            Notification.requestPermission().then((permission) => {
-                if (permission === "granted") {
-                    messaging.getToken().then((token) => {
-                        console.log("✅ Token FCM reçu :", token);
-                        alert("Notifications activées ! Vérifie la console (F12) pour voir le token.");
-                    }).catch((err) => {
-                        console.log("❌ Erreur lors de la récupération du token", err);
-                    });
-                } else {
-                    alert("❌ Permission refusée. Activez les notifications dans les paramètres du navigateur.");
-                }
-            });
-        });
+        }        
 
         // Écouter les notifications reçues pendant que l'utilisateur est sur la page
         messaging.onMessage((payload) => {
