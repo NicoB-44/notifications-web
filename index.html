@@ -17,7 +17,7 @@
     <button id="notifButton">Activer les notifications</button>
 
     <script>
-        // 📌 Configuration Firebase (remplace avec TES informations Firebase)
+        // 📌 Configuration Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyASQVCg8yyA_oRBn_PnGQUYTg4WwHjqByI",
             authDomain: "pc-scraper-poc.firebaseapp.com",
@@ -30,6 +30,17 @@
         // Initialise Firebase
         firebase.initializeApp(firebaseConfig);
         const messaging = firebase.messaging();
+
+        // 📌 Enregistrer le Service Worker (nécessaire pour les notifications)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/firebase-messaging-sw.js')
+                .then((registration) => {
+                    console.log("✅ Service Worker enregistré avec succès :", registration);
+                })
+                .catch((error) => {
+                    console.log("❌ Erreur lors de l’enregistrement du Service Worker :", error);
+                });
+        }
 
         // Demande la permission pour recevoir des notifications
         document.getElementById("notifButton").addEventListener("click", () => {
