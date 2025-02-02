@@ -8,6 +8,7 @@
     <!-- Import Firebase -->
     <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-messaging-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-auth-compat.js"></script>
 </head>
 <body>
     <h1>Bienvenue sur mon site de notifications !</h1>
@@ -74,9 +75,10 @@
             console.log("📩 Notification reçue :", payload);
             alert(payload.notification.title + "\n" + payload.notification.body);
         });
-        
+
         // 📌 Importer Firebase Auth
         const auth = firebase.auth();
+        console.log("✅ Firebase initialisé avec succès !");
 
         // 📌 Vérifier l'état de connexion au chargement de la page
         auth.onAuthStateChanged((user) => {
