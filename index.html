@@ -31,6 +31,9 @@
         firebase.initializeApp(firebaseConfig);
         const messaging = firebase.messaging();
 
+        // 📌 Désactiver l'enregistrement automatique du Service Worker par Firebase
+        messaging.useServiceWorker(navigator.serviceWorker.getRegistration('/notifications-web/firebase-messaging-sw.js'));
+
         // 📌 Enregistrer le Service Worker (nécessaire pour les notifications)
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/notifications-web/firebase-messaging-sw.js')
