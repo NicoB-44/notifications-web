@@ -4,9 +4,54 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Notifications Web</title>
+    
+    <!-- Import Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-messaging-compat.js"></script>
 </head>
 <body>
     <h1>Bienvenue sur mon site de notifications !</h1>
     <p>Ce site recevra des notifications push lorsque des produits seront disponibles.</p>
+
+    <!-- Bouton pour activer les notifications -->
+    <button id="notifButton">Activer les notifications</button>
+
+    <script>
+        // 📌 Configuration Firebase (remplace avec TES informations Firebase)
+        const firebaseConfig = {
+            apiKey: "AIzaSyASQVCg8yyA_oRBn_PnGQUYTg4WwHjqByI",
+            authDomain: "pc-scraper-poc.firebaseapp.com",
+            projectId: "pc-scraper-poc",
+            storageBucket: "pc-scraper-poc.firebasestorage.app",
+            messagingSenderId: "474435730603",
+            appId: "1:474435730603:web:ddd69a9b3cbc88de24cbee"
+        };
+
+        // Initialise Firebase
+        firebase.initializeApp(firebaseConfig);
+        const messaging = firebase.messaging();
+
+        // Demande la permission pour recevoir des notifications
+        document.getElementById("notifButton").addEventListener("click", () => {
+            Notification.requestPermission().then((permission) => {
+                if (permission === "granted") {
+                    messaging.getToken().then((token) => {
+                        console.log("✅ Token FCM reçu :", token);
+                        alert("Notifications activées ! Vérifie la console (F12) pour voir le token.");
+                    }).catch((err) => {
+                        console.log("❌ Erreur lors de la récupération du token", err);
+                    });
+                } else {
+                    alert("❌ Permission refusée. Activez les notifications dans les paramètres du navigateur.");
+                }
+            });
+        });
+
+        // Écouter les notifications reçues pendant que l'utilisateur est sur la page
+        messaging.onMessage((payload) => {
+            console.log("📩 Notification reçue :", payload);
+            alert(payload.notification.title + "\n" + payload.notification.body);
+        });
+    </script>
 </body>
 </html>
