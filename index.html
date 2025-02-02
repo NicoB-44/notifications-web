@@ -9,6 +9,8 @@
     <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-messaging-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore-compat.js"></script>
+
 </head>
 <body>
     <h1>Bienvenue sur mon site de notifications !</h1>
@@ -94,13 +96,27 @@
         });
 
         // 📌 Inscription d'un nouvel utilisateur
+        const db = firebase.firestore(); // 📌 Connexion à Firestore
+
         document.getElementById("signupButton").addEventListener("click", () => {
             const email = document.getElementById("email").value;
             const password = document.getElementById("password").value;
 
             auth.createUserWithEmailAndPassword(email, password)
                 .then((userCredential) => {
-                    console.log("✅ Utilisateur créé :", userCredential.user.email);
+                    const user = userCredential.user;
+                    console.log("✅ Utilisateur créé :", user.email);
+
+                    // 📌 Ajouter l'utilisateur à Firestore
+                    db.collection("users").doc(user.uid).set({
+                        email: user.email,
+                        notifications_enabled: true
+                    }).then(() => {
+                        console.log("✅ Utilisateur ajouté à Firestore !");
+                    }).catch((error) => {
+                        console.log("❌ Erreur Firestore :", error);
+                    });
+
                     alert("Compte créé avec succès !");
                 })
                 .catch((error) => {
@@ -108,6 +124,7 @@
                     alert(error.message);
                 });
         });
+
 
         // 📌 Connexion d'un utilisateur existant
         document.getElementById("loginButton").addEventListener("click", () => {
