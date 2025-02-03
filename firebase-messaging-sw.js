@@ -16,11 +16,25 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// Gérer la réception des notifications en arrière-plan
+// 📌 Gérer les notifications en arrière-plan
 messaging.onBackgroundMessage((payload) => {
     console.log("📩 Notification reçue en arrière-plan :", payload);
     self.registration.showNotification(payload.notification.title, {
         body: payload.notification.body,
         icon: "/logo.png" // Optionnel : icône de la notification
     });
+});
+
+// 📌 Écouteur pour garantir que les notifications sont affichées même en arrière-plan
+self.addEventListener("push", (event) => {
+    if (event.data) {
+        const payload = event.data.json();
+        console.log("📩 Notification push reçue :", payload);
+        event.waitUntil(
+            self.registration.showNotification(payload.notification.title, {
+                body: payload.notification.body,
+                icon: "/logo.png",
+            })
+        );
+    }
 });
