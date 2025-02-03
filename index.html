@@ -10,7 +10,6 @@
     <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-messaging-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore-compat.js"></script>
-
 </head>
 <body>
     <h1>Bienvenue sur mon site de notifications !</h1>
@@ -23,13 +22,11 @@
     <button id="loginButton">Se connecter</button>
     <button id="logoutButton" style="display:none;">Se déconnecter</button>
     
-    <p id="authStatus">🔄 Vérification de l'état de connexion...</p> 
-
-    <!-- Bouton pour activer les notifications -->
+    <!-- Bouton pour activer/désactiver les notifications -->
     <button id="notifButton">Activer les notifications</button>
 
     <script>
-        // 📌 Configuration Firebase
+        // Configuration Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyASQVCg8yyA_oRBn_PnGQUYTg4WwHjqByI",
             authDomain: "pc-scraper-poc.firebaseapp.com",
@@ -42,116 +39,46 @@
         // Initialise Firebase
         firebase.initializeApp(firebaseConfig);
         const messaging = firebase.messaging();
-
-        // 📌 Enregistrer manuellement le Service Worker et récupérer le Token FCM
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/notifications-web/firebase-messaging-sw.js')
-                .then((registration) => {
-                    console.log("✅ Service Worker enregistré avec succès :", registration);
-
-                    // 📌 Ajouter un écouteur sur le bouton pour activer les notifications
-                    document.getElementById("notifButton").addEventListener("click", () => {
-                        Notification.requestPermission().then((permission) => {
-                            if (permission === "granted") {
-                                messaging.getToken({ serviceWorkerRegistration: registration }) // ✅ Correction ici !
-                                    .then((token) => {
-                                        console.log("✅ Token FCM reçu :", token);
-                                        alert("Notifications activées ! Vérifie la console (F12) pour voir le token.");
-                                    })
-                                    .catch((err) => {
-                                        console.log("❌ Erreur lors de la récupération du token", err);
-                                    });
-                            } else {
-                                alert("❌ Permission refusée. Activez les notifications dans les paramètres du navigateur.");
-                            }
-                        });
-                    });
-                })
-                .catch((error) => {
-                    console.log("❌ Erreur lors de l’enregistrement du Service Worker :", error);
-                });
-        }        
-
-        // Écouter les notifications reçues pendant que l'utilisateur est sur la page
-        messaging.onMessage((payload) => {
-            console.log("📩 Notification reçue :", payload);
-            alert(payload.notification.title + "\n" + payload.notification.body);
-        });
-
-        // 📌 Importer Firebase Auth
         const auth = firebase.auth();
-        console.log("✅ Firebase initialisé avec succès !");
+        const db = firebase.firestore();
 
-        // 📌 Vérifier l'état de connexion au chargement de la page
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                console.log("✅ Utilisateur connecté :", user.email);
-                document.getElementById("authStatus").innerText = `✅ Connecté en tant que ${user.email}`;
-                document.getElementById("logoutButton").style.display = "block";
-            } else {
-                console.log("❌ Aucun utilisateur connecté.");
-                document.getElementById("authStatus").innerText = "❌ Non connecté";
-                document.getElementById("logoutButton").style.display = "none";
-            }
-        });
+        // Enregistrer le Token FCM lors de l'inscription
+        function registerTokenForUser(user) {
+            messaging.getToken().then((token) => {
+                if (token) {
+                    db.collection("users").doc(user.uid).set({
+                        email: user.email,
+                        token: token,
+                        notifications_enabled: true
+                    }, { merge: true });
+                }
+            }).catch((err) => {
+                console.error("Erreur lors de la récupération du Token FCM:", err);
+            });
+        }
 
-        // 📌 Inscription d'un nouvel utilisateur
-        const db = firebase.firestore(); // 📌 Connexion à Firestore
-
+        // Gestion de l'inscription
         document.getElementById("signupButton").addEventListener("click", () => {
             const email = document.getElementById("email").value;
             const password = document.getElementById("password").value;
-
-            auth.createUserWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    const user = userCredential.user;
-                    console.log("✅ Utilisateur créé :", user.email);
-
-                    // 📌 Ajouter l'utilisateur à Firestore
-                    db.collection("users").doc(user.uid).set({
-                        email: user.email,
-                        notifications_enabled: true
-                    }).then(() => {
-                        console.log("✅ Utilisateur ajouté à Firestore !");
-                    }).catch((error) => {
-                        console.log("❌ Erreur Firestore :", error);
-                    });
-
-                    alert("Compte créé avec succès !");
-                })
-                .catch((error) => {
-                    console.log("❌ Erreur d'inscription :", error.message);
-                    alert(error.message);
-                });
-        });
-
-
-        // 📌 Connexion d'un utilisateur existant
-        document.getElementById("loginButton").addEventListener("click", () => {
-            const email = document.getElementById("email").value;
-            const password = document.getElementById("password").value;
-
-            auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    console.log("✅ Connecté :", userCredential.user.email);
-                    alert("Connexion réussie !");
-                })
-                .catch((error) => {
-                    console.log("❌ Erreur de connexion :", error.message);
-                    alert(error.message);
-                });
-        });
-
-        // 📌 Déconnexion
-        document.getElementById("logoutButton").addEventListener("click", () => {
-            auth.signOut().then(() => {
-                console.log("✅ Déconnecté avec succès");
-                alert("Déconnexion réussie !");
-            }).catch((error) => {
-                console.log("❌ Erreur lors de la déconnexion :", error.message);
+            auth.createUserWithEmailAndPassword(email, password).then((userCredential) => {
+                registerTokenForUser(userCredential.user);
             });
         });
 
+        // Gestion de l'état des notifications
+        document.getElementById("notifButton").addEventListener("click", () => {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            const userRef = db.collection("users").doc(user.uid);
+            userRef.get().then((doc) => {
+                if (doc.exists) {
+                    const currentStatus = doc.data().notifications_enabled;
+                    userRef.update({ notifications_enabled: !currentStatus });
+                }
+            });
+        });
     </script>
 </body>
 </html>
