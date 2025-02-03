@@ -63,21 +63,23 @@
 
         // 📌 Fonction pour vérifier et rafraîchir le Token FCM si nécessaire
         function checkAndRefreshToken(user) {
-            messaging.getToken().then((token) => {
-                if (token) {
-                    const userRef = db.collection("users").doc(user.uid);
-                    userRef.get().then((doc) => {
-                        if (!doc.exists || !doc.data().token || doc.data().token !== token) {
-                            userRef.set({ token: token }, { merge: true }).then(() => {
-                                console.log("🔄 Token FCM mis à jour pour", user.email);
-                            }).catch((error) => {
-                                console.log("❌ Erreur lors de l'enregistrement du Token FCM :", error);
-                            });
-                        }
-                    });
-                }
-            }).catch((err) => {
-                console.log("❌ Erreur lors de la récupération du Token FCM :", err);
+            navigator.serviceWorker.ready.then((registration) => {
+                messaging.getToken({ serviceWorkerRegistration: registration }).then((token) => {
+                    if (token) {
+                        const userRef = db.collection("users").doc(user.uid);
+                        userRef.get().then((doc) => {
+                            if (!doc.exists || !doc.data().token || doc.data().token !== token) {
+                                userRef.set({ token: token }, { merge: true }).then(() => {
+                                    console.log("🔄 Token FCM mis à jour pour", user.email);
+                                }).catch((error) => {
+                                    console.log("❌ Erreur lors de l'enregistrement du Token FCM :", error);
+                                });
+                            }
+                        });
+                    }
+                }).catch((err) => {
+                    console.log("❌ Erreur lors de la récupération du Token FCM :", err);
+                });
             });
         }
 
