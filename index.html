@@ -22,11 +22,13 @@
     <button id="loginButton">Se connecter</button>
     <button id="logoutButton" style="display:none;">Se déconnecter</button>
     
+    <p id="authStatus">🔄 Vérification de l'état de connexion...</p> 
+
     <!-- Bouton pour activer/désactiver les notifications -->
     <button id="notifButton">Activer les notifications</button>
 
     <script>
-        // Configuration Firebase
+        // 📌 Configuration Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyASQVCg8yyA_oRBn_PnGQUYTg4WwHjqByI",
             authDomain: "pc-scraper-poc.firebaseapp.com",
@@ -42,34 +44,93 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // Enregistrer le Token FCM lors de l'inscription
-        function registerTokenForUser(user) {
+        // 📌 Enregistrer le Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/notifications-web/firebase-messaging-sw.js')
+                .then((registration) => {
+                    console.log("✅ Service Worker enregistré avec succès :", registration);
+                })
+                .catch((error) => {
+                    console.log("❌ Erreur lors de l’enregistrement du Service Worker :", error);
+                });
+        }
+
+        // 📌 Écouter les notifications reçues pendant que l'utilisateur est sur la page
+        messaging.onMessage((payload) => {
+            console.log("📩 Notification reçue :", payload);
+            alert(payload.notification.title + "\n" + payload.notification.body);
+        });
+
+        // 📌 Fonction pour vérifier et rafraîchir le Token FCM si nécessaire
+        function checkAndRefreshToken(user) {
             messaging.getToken().then((token) => {
                 if (token) {
-                    db.collection("users").doc(user.uid).set({
-                        email: user.email,
-                        token: token,
-                        notifications_enabled: true
-                    }, { merge: true });
+                    const userRef = db.collection("users").doc(user.uid);
+                    userRef.get().then((doc) => {
+                        if (!doc.exists || !doc.data().token || doc.data().token !== token) {
+                            userRef.set({ token: token }, { merge: true }).then(() => {
+                                console.log("🔄 Token FCM mis à jour pour", user.email);
+                            }).catch((error) => {
+                                console.log("❌ Erreur lors de l'enregistrement du Token FCM :", error);
+                            });
+                        }
+                    });
                 }
             }).catch((err) => {
-                console.error("Erreur lors de la récupération du Token FCM:", err);
+                console.log("❌ Erreur lors de la récupération du Token FCM :", err);
             });
         }
 
-        // Gestion de l'inscription
+        // 📌 Inscription d'un nouvel utilisateur avec enregistrement dans Firestore
         document.getElementById("signupButton").addEventListener("click", () => {
             const email = document.getElementById("email").value;
             const password = document.getElementById("password").value;
             auth.createUserWithEmailAndPassword(email, password).then((userCredential) => {
-                registerTokenForUser(userCredential.user);
+                const user = userCredential.user;
+                db.collection("users").doc(user.uid).set({
+                    email: user.email,
+                    notifications_enabled: true
+                }).then(() => {
+                    console.log("✅ Utilisateur ajouté à Firestore :", user.email);
+                    checkAndRefreshToken(user);
+                }).catch((error) => {
+                    console.log("❌ Erreur lors de l'ajout de l'utilisateur à Firestore :", error);
+                });
+            }).catch((error) => {
+                console.log("❌ Erreur d'inscription :", error.message);
             });
         });
 
-        // Gestion de l'état des notifications
+        // 📌 Déconnexion
+        document.getElementById("logoutButton").addEventListener("click", () => {
+            auth.signOut().then(() => {
+                console.log("✅ Déconnecté avec succès");
+                alert("Déconnexion réussie !");
+            }).catch((error) => {
+                console.log("❌ Erreur lors de la déconnexion :", error.message);
+            });
+        });
+
+        // 📌 Vérifier et mettre à jour le Token FCM à la connexion
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                console.log("✅ Utilisateur connecté :", user.email);
+                document.getElementById("authStatus").innerText = `✅ Connecté en tant que ${user.email}`;
+                document.getElementById("logoutButton").style.display = "block";
+                checkAndRefreshToken(user);
+            } else {
+                console.log("❌ Aucun utilisateur connecté.");
+                document.getElementById("authStatus").innerText = "❌ Non connecté";
+                document.getElementById("logoutButton").style.display = "none";
+            }
+        });
+
+        // 📌 Modifier le bouton "Activer les notifications" pour modifier `notifications_enabled` et vérifier le Token
         document.getElementById("notifButton").addEventListener("click", () => {
             const user = auth.currentUser;
             if (!user) return;
+
+            checkAndRefreshToken(user);
 
             const userRef = db.collection("users").doc(user.uid);
             userRef.get().then((doc) => {
